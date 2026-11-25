@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Domnicx Stream</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#101114;color:#fff;font-family:Arial,sans-serif}
+header{padding:20px 6%;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #292a30}
+.logo{font-size:23px;font-weight:bold;color:#e50914}
+main{padding:25px 6%}
+h1{font-size:30px}
+input,button{padding:12px;border:0;border-radius:7px}
+input{background:#24252b;color:white}
+button{background:#e50914;color:white;cursor:pointer}
+.search{width:100%;margin:15px 0}
+#videos{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:18px}
+.video{background:#202127;border-radius:10px;overflow:hidden}
+.video video{width:100%;display:block;background:#000}
+.video h3{padding:0 12px}
+.video p{padding:0 12px;color:#aaa;font-size:13px}
+.upload{margin:30px 0;padding:20px;background:#202127;border-radius:10px}
+</style>
+</head>
+<body>
+<header>
+<div class="logo">DOMNICX STREAM</div>
+<div>YOUR PERSONAL VIDEO LIBRARY</div>
+</header>
+
+<main>
+<h1>Explore videos</h1>
+<p style="color:#aaa">Your personal streaming library.</p>
+
+<input class="search" id="search" placeholder="Search videos..." oninput="loadVideos()">
+
+<div id="videos">Loading videos...</div>
+
+<div class="upload">
+<h2>Upload a video</h2>
+<input type="file" id="file" accept="video/mp4,video/webm,video/ogg">
+<button onclick="uploadVideo()">Upload</button>
+<p id="message"></p>
+</div>
+</main>
+
+<script>
+async function loadVideos(){
+const response=await fetch('/api/videos');
+const videos=await response.json();
+const query=document.getElementById('search').value.toLowerCase();
+const filtered=videos.filter(v=>v.title.toLowerCase().includes(query));
+document.getElementById('videos').innerHTML=filtered.map(v=>`
+<div class="video">
+<video controls preload="metadata">
+<source src="${v.stream}" type="video/mp4">
+</video>
+<h3>${escapeHtml(v.title)}</h3>
+<p>Domnicx Stream</p>
+</div>`).join('') || '<p>No videos found.</p>';
+}
+function escapeHtml(value){
+return value.replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+async function uploadVideo(){
+const file=document.getElementById('file').files[0];
+if(!file){alert('Choose a video first.');return;}
+const data=new FormData();
+data.append('video',file);
+document.getElementById('message').textContent='Uploading...';
+try{
+const response=await fetch('/api/upload',{method:'POST',body:data});
+const result=await response.json();
+document.getElementById('message').textContent=result.message||result.error;
+if(response.ok)loadVideos();
+}catch(error){
+document.getElementById('message').textContent='Upload failed.';
+}
+}
+loadVideos();
+</script>
+</body>
+</html>
